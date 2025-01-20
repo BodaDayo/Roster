@@ -13,7 +13,10 @@ fun getCurrentQuarter(): Int {
 }
 
 fun getCurrentWeekOfYear(): Int {
-    return Calendar.getInstance().get(Calendar.WEEK_OF_YEAR)
+    val calendar = Calendar.getInstance()
+    calendar.firstDayOfWeek = Calendar.MONDAY // Set Monday as the first day of the week
+    calendar.minimalDaysInFirstWeek = 4 // ISO 8601: Weeks start with at least 4 days in the first week
+    return calendar.get(Calendar.WEEK_OF_YEAR)
 }
 
 fun getMonthAbbreviation(quarterNumber: Int, monthIndex: Int): String {
@@ -80,12 +83,14 @@ fun getWeekDateRange(year: Int, weekNumber: Int): String {
     // Set to the first day of the week (Monday)
     calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
     val startDay = calendar.get(Calendar.DAY_OF_MONTH)
-    val startMonth = calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, java.util.Locale.getDefault())
+    val startMonth =
+        calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, java.util.Locale.getDefault())
 
     // Move to the last day of the week (Sunday)
     calendar.add(Calendar.DAY_OF_MONTH, 6)
     val endDay = calendar.get(Calendar.DAY_OF_MONTH)
-    val endMonth = calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, java.util.Locale.getDefault())
+    val endMonth =
+        calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, java.util.Locale.getDefault())
 
     // Return formatted date range
     return "${formatDayWithSuffix(startDay)} $startMonth\n${formatDayWithSuffix(endDay)} $endMonth"
@@ -104,11 +109,13 @@ private fun formatDayWithSuffix(day: Int): String {
 
 fun getFilteredAndSortedStaff(
     staffList: List<StaffMember>,
+    selectedYear: Int,
     selectedWeek: Int
 ): List<StaffMember> {
-    // Filter staff who are on call for the selected week
-    val filteredStaff = staffList.filter {
-        it.onCallDates.contains(selectedWeek) || it.gymCallDates.contains(selectedWeek)
+    // Filter staff who are on call for the selected week of the selected year
+    val filteredStaff = staffList.filter { staff ->
+        staff.onCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek)} ||
+                staff.gymCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) }
     }
 
     // Placeholder for "N/A" staff
@@ -125,28 +132,33 @@ fun getFilteredAndSortedStaff(
         phone = ""
     )
 
-    // Interns, sorted by unit (1, 2, 3)
-    val role1Staff = filteredStaff.filter { it.role == 1 && !it.gymCallDates.contains(selectedWeek)}
-        .sortedBy { it.unit }
-        .take(3)
+    // Ward call staffs, sorted by unit (1, 2, 3)
+    val wardCallStaff =
+        filteredStaff.filter { staff ->
+            staff.role == 1 && !staff.gymCallDates
+                .any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) }
+        }.sortedBy { it.unit }
+            .take(3)
 
     // Gym call staff
-    val gymCallStaff = filteredStaff.find { it.gymCallDates.contains(selectedWeek) }
+    val gymCallStaff = filteredStaff.find { staff ->
+        staff.gymCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) }
+    }
 
     // 2nd on Call
-    val role2To5Staff = filteredStaff.find { it.role in 2..5 }
+    val secondOnCall = filteredStaff.find { it.role in 2..5 }
 
     // 3rd on Call
-    val role6Or7Staff = filteredStaff.find { it.role in 6..7 }
+    val thirdOnCall = filteredStaff.find { it.role in 6..7 }
 
     // Assemble the final list of 6 items, filling with placeholders as needed
     return listOf(
-        role1Staff.getOrNull(0) ?: placeholder,
-        role1Staff.getOrNull(1) ?: placeholder,
-        role1Staff.getOrNull(2) ?: placeholder,
+        wardCallStaff.getOrNull(0) ?: placeholder,
+        wardCallStaff.getOrNull(1) ?: placeholder,
+        wardCallStaff.getOrNull(2) ?: placeholder,
         gymCallStaff ?: placeholder,
-        role2To5Staff ?: placeholder,
-        role6Or7Staff ?: placeholder
+        secondOnCall ?: placeholder,
+        thirdOnCall ?: placeholder
     )
 }
 
@@ -157,9 +169,6 @@ fun getMonthForWeek(selectedWeek: Int): Int {
     // Calculate the month by dividing the selected week number
     return ((selectedWeek - 1) / weeksInMonth) + 1
 }
-
-
-
 
 
 
