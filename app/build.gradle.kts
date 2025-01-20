@@ -70,6 +70,10 @@ dependencies {
     //Coil
     implementation(libs.coil)
 
+    // Compose Destinations
+    implementation(libs.compose.destinations.core)
+    ksp(libs.compose.destinations.ksp)
+
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
