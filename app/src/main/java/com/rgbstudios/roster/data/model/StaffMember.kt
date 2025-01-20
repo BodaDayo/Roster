@@ -7,8 +7,8 @@ data class StaffMember(
     val role: Int,
     val unit: Int,
     val avatarUri: String,
-    val onCallDates: List<Int>,
-    val gymCallDates: List<Int>,
-    val leaveDates: List<Int>,
+    val onCallDates: List<Pair<Int, List<Int>>>,
+    val gymCallDates: List<Pair<Int, List<Int>>>,
+    val leaveDates: List<Pair<Int, List<Int>>>,
     val phone: String,
 )
