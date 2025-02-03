@@ -1,15 +1,18 @@
 package com.rgbstudios.roster.utils
 
+import androidx.compose.ui.graphics.painter.Painter
 import com.rgbstudios.roster.data.model.StaffMember
+import java.time.LocalDate
+import java.time.temporal.WeekFields
 import java.util.Calendar
+import java.util.Locale
 
 fun getCurrentYear(): Int {
     return Calendar.getInstance().get(Calendar.YEAR)
 }
 
-fun getCurrentQuarter(): Int {
-    val month = Calendar.getInstance().get(Calendar.MONTH) + 1
-    return (month - 1) / 3 + 1
+fun getCurrentMonth(): Int {
+    return Calendar.getInstance().get(Calendar.MONTH)
 }
 
 fun getCurrentWeekOfYear(): Int {
@@ -19,15 +22,16 @@ fun getCurrentWeekOfYear(): Int {
     return calendar.get(Calendar.WEEK_OF_YEAR)
 }
 
-fun getMonthAbbreviation(quarterNumber: Int, monthIndex: Int): String {
+fun getMonthInfo(selectedMonth: Int): Pair<String, String> {
     val months = listOf(
-        "Jan", "Feb", "Mar",  // Q1
-        "Apr", "May", "Jun",  // Q2
-        "Jul", "Aug", "Sep",  // Q3
-        "Oct", "Nov", "Dec"   // Q4
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     )
-    val startMonthIndex = (quarterNumber - 1) * 3 // Index for the first month of the quarter
-    return months[startMonthIndex + monthIndex]
+    val monthNames = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    )
+    return Pair(months[selectedMonth - 1], monthNames[selectedMonth - 1])
 }
 
 fun getUnitName(unit: Int): String {
@@ -59,18 +63,12 @@ fun getCallStats(onCallDates: List<Int>): String {
     return "Calls Done: $callsDone/$totalCalls"
 }
 
-fun getLeaveStatus(leaveDates: List<Int>): String {
-    val currentWeek = getCurrentWeekOfYear()
-    if (leaveDates.isEmpty()) return "No Leave Scheduled"
+fun getLeaveStatus(staff: StaffMember): Boolean {
+    val currentYear = getCurrentYear()
+    val currentMonth = getCurrentMonth()
 
-    val upcomingLeave = leaveDates.filter { it >= currentWeek }.sorted()
-    val currentLeaveStart = leaveDates.find { it <= currentWeek && currentWeek < it + 4 }
-
-    return when {
-        currentLeaveStart != null -> "On Leave"
-        upcomingLeave.isNotEmpty() -> "Next Leave: Week ${upcomingLeave.first()} - Week ${upcomingLeave.last()}"
-        else -> "Leave Taken"
-    }
+    // Check if there's an entry in leaveDates matching the current year and month
+    return staff.leaveDates.any { (year, month) -> year == currentYear && month == currentMonth }
 }
 
 fun getWeekDateRange(year: Int, weekNumber: Int): String {
@@ -107,7 +105,7 @@ private fun formatDayWithSuffix(day: Int): String {
     }
 }
 
-fun getFilteredAndSortedStaff(
+fun getStaffOnCall(
     staffList: List<StaffMember>,
     selectedYear: Int,
     selectedWeek: Int
@@ -118,7 +116,6 @@ fun getFilteredAndSortedStaff(
                 staff.gymCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) }
     }
 
-    // Placeholder for "N/A" staff
     val placeholder = StaffMember(
         id = -1,
         firstName = "N/A",
@@ -162,6 +159,36 @@ fun getFilteredAndSortedStaff(
     )
 }
 
+fun getStaffOnLeave(
+    staffList: List<StaffMember>,
+    selectedYear: Int,
+    selectedMonth: Int
+): List<StaffMember> {
+    // Filter staff on leave for the given year and week
+    val onLeaveStaff = staffList.filter { staff ->
+        staff.leaveDates.any { (year, month) ->
+            year == selectedYear && month == selectedMonth
+        }
+    }
+
+    val sortedStaffList = onLeaveStaff.sortedBy { it.role }
+
+    return sortedStaffList.ifEmpty {
+        listOf(StaffMember(
+        id = -1,
+        firstName = "N/A",
+        lastName = "",
+        role = -1,
+        unit = -1,
+        avatarUri = "",
+        onCallDates = emptyList(),
+        gymCallDates = emptyList(),
+        leaveDates = emptyList(),
+        phone = ""
+    ))
+    }
+}
+
 fun getMonthForWeek(selectedWeek: Int): Int {
     // Weeks per month
     val weeksInMonth = 4 // Assuming 4 weeks per month
@@ -170,5 +197,25 @@ fun getMonthForWeek(selectedWeek: Int): Int {
     return ((selectedWeek - 1) / weeksInMonth) + 1
 }
 
+fun getWeekForMonth(month: Int, year: Int): Int {
+    // Create a Calendar instance and set it to the first day of the given month and year
+    val calendar = Calendar.getInstance()
+    calendar.set(Calendar.YEAR, year)
+    calendar.set(Calendar.MONTH, month - 1) // Calendar months are 0-based (January is 0)
+    calendar.set(Calendar.DAY_OF_MONTH, 1)
+
+    // Get the week number of the first day of the month
+    return calendar.get(Calendar.WEEK_OF_YEAR)
+}
 
 
+fun calculateMonthProgress(year: Int, month: Int): Float {
+    val calendar = Calendar.getInstance()
+    calendar.set(year, month - 1, 1) // Set to the first day of the month
+
+    val totalDaysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+    val currentDayOfMonth = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+
+    // Ensure we don't exceed the total days in the month
+    return (currentDayOfMonth.toFloat() / totalDaysInMonth.toFloat()).coerceIn(0f, 1f)
+}
