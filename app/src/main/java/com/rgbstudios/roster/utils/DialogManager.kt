@@ -1,16 +1,10 @@
 package com.rgbstudios.roster.utils
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -26,156 +20,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
-import com.rgbstudios.roster.R
-import com.rgbstudios.roster.ui.destinations.CallRosterScreenDestination
-import com.rgbstudios.roster.ui.destinations.LeaveRosterScreenDestination
-import com.rgbstudios.roster.ui.destinations.NotificationsScreenDestination
-import com.rgbstudios.roster.ui.destinations.StaffListScreenDestination
-
-@Composable
-fun NavigationDialog(
-    navigator: DestinationsNavigator,
-    onDismissRequest: () -> Unit,
-    currentScreen: String,
-    isLoggedIn: Boolean,
-    onLoginClick: () -> Unit,
-    onLogoutClick: () -> Unit
-) {
-        Dialog(onDismissRequest = onDismissRequest) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                    Text(
-                        text = "Menu",
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        // Main Screen Icon
-                        item {
-                            NavigationGridItem(
-                                icon = painterResource(id = R.drawable.ic_user_plus),
-                                label = "Call Roster",
-                                isDisabled = currentScreen == "CallRosterScreen",
-                                onClick = {
-                                    onDismissRequest()
-                                    navigator.navigate(CallRosterScreenDestination)
-                                }
-                            )
-                        }
-
-                        // Leave Roster Screen Icon
-                        item {
-                            NavigationGridItem(
-                                icon = painterResource(id = R.drawable.ic_beach),
-                                label = "Leave Roster",
-                                isDisabled = currentScreen == "LeaveRosterScreen",
-                                onClick = {
-                                    onDismissRequest()
-                                    navigator.navigate(LeaveRosterScreenDestination)
-                                }
-                            )
-                        }
-
-                        // Staff List Screen Icon
-                        item {
-                            NavigationGridItem(
-                                icon = painterResource(id = R.drawable.ic_people),
-                                label = "Staff List",
-                                isDisabled = currentScreen == "StaffListScreen",
-                                onClick = {
-                                    onDismissRequest()
-                                    navigator.navigate(StaffListScreenDestination)
-                                }
-                            )
-                        }
-
-                        // Placeholder or additional screen
-                        item {
-                            NavigationGridItem(
-                                icon = painterResource(id = R.drawable.ic_notification),
-                                label = "Notifications",
-                                isDisabled = currentScreen == "NotificationsScreen",
-                                onClick = {
-                                    navigator.navigate(NotificationsScreenDestination)
-                                    onDismissRequest()
-                                }
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = if (isLoggedIn) "Logout" else "Admin Login",
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier
-                            .padding(16.dp)
-                            .align(Alignment.End)
-                            .clickable {
-                                if (isLoggedIn) {
-                                    onLogoutClick()
-                                } else {
-                                    onLoginClick()
-                                }
-                                onDismissRequest()
-                            }
-                    )
-                }
-            }
-        }
-}
-
-
-@Composable
-fun NavigationGridItem(
-    icon: Painter,
-    label: String,
-    isDisabled: Boolean = false,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .padding(8.dp)
-            .let {
-                if (isDisabled) it else it.clickable { onClick() }
-            }
-    ) {
-        Icon(
-            painter = icon,
-            contentDescription = label,
-            modifier = Modifier.size(48.dp),
-            tint = if (isDisabled) Color.Gray else MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isDisabled) Color.Gray else MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
 
 @Composable
 fun UserLoginDialog(
@@ -291,18 +138,3 @@ fun UserLoginDialog(
 fun validateCredentials(email: String, password: String): Boolean {
     return email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() && password.isNotBlank()
 }
-
-/**
-@Preview(showBackground = true)
-@Composable
-fun PreviewNavigationDialog() {
-    NavigationDialog(
-        onDismissRequest = {  },
-        currentScreen = "NotificationsScreen",
-        isLoggedIn = true,
-        onLoginClick = {  },
-        onLogoutClick = {
-        }
-    )
-}
- */
