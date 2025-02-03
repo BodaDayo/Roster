@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Roster</string>
     <string name="close_left_column_button">Close left column button</string>
+    <string name="app_icon">App Icon</string>
+    <string name="roster_app">Roster App</string>
 </resources>
