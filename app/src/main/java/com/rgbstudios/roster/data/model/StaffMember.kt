@@ -9,6 +9,6 @@ data class StaffMember(
     val avatarUri: String,
     val onCallDates: List<Pair<Int, List<Int>>>,
     val gymCallDates: List<Pair<Int, List<Int>>>,
-    val leaveDates: List<Pair<Int, List<Int>>>,
+    val leaveDates: List<Pair<Int, Int>>,
     val phone: String,
 )
