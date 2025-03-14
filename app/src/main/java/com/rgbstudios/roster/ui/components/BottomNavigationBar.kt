@@ -1,11 +1,13 @@
 package com.rgbstudios.roster.ui.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -20,7 +22,7 @@ fun BottomNavigationBar(navController: NavController) {
         Screen.CallRoster,
         Screen.LeaveRoster,
         Screen.StaffList,
-        Screen.Settings
+        Screen.Resources
     )
 
     NavigationBar {
@@ -41,7 +43,8 @@ fun BottomNavigationBar(navController: NavController) {
                 icon = {
                     Image(
                         painter = painterResource(id = screen.iconRes),
-                        contentDescription = screen.route
+                        contentDescription = screen.route,
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant) // Auto-adjusts color
                     )
                 },
                 label = { Text(screen.name) }
