@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.rgbstudios.roster" />
+                  <option name="mobileSdkAppId" value="1:229552976880:android:957f09b3959d18a6f52335" />
+                  <option name="projectId" value="roster-b0da1" />
+                  <option name="projectNumber" value="229552976880" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
