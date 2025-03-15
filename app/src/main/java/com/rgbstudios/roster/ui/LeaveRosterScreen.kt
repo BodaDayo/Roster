@@ -3,48 +3,47 @@ package com.rgbstudios.roster.ui
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.rgbstudios.roster.R
 import com.rgbstudios.roster.data.viewmodel.RosterViewModel
 import com.rgbstudios.roster.navigation.Screen
+import com.rgbstudios.roster.ui.components.EditModeBar
 import com.rgbstudios.roster.ui.components.LeftStaffColumn
 import com.rgbstudios.roster.ui.components.MonthListColumn
+import com.rgbstudios.roster.utils.EditLeaveDialog
 import com.rgbstudios.roster.utils.getCurrentMonth
 import com.rgbstudios.roster.utils.getCurrentYear
 import com.rgbstudios.roster.utils.getStaffOnLeave
 
 @Composable
 fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
-    val staffList by rosterViewModel.staffList // Observe staffList
-    val isLoggedIn by rosterViewModel.isLoggedIn // Observe isLoggedIn
+    val staffList by rosterViewModel.staffList.collectAsState()
+    val isSignedIn by rosterViewModel.adminSignedIn.collectAsState()
 
     // States
     var isInEditMode by remember { mutableStateOf(false) }
 
     var isLeftExpanded by remember { mutableStateOf(false) }
+
+    var showEditStaffDialog by remember { mutableStateOf(false) }
 
     var selectedYear by remember { mutableIntStateOf(getCurrentYear()) }
     var selectedMonth by remember { mutableIntStateOf(getCurrentMonth()) }
@@ -54,8 +53,7 @@ fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
     // Gesture detection for swipe
     val swipeableModifier = Modifier.pointerInput(Unit) {
         detectHorizontalDragGestures { change, dragAmount ->
-            change.consume() // Consume the gesture to prevent it fr
-            // om propagating further
+            change.consume() // Consume the gesture to prevent it from propagating further
             if (dragAmount > 0) {
                 // Swipe right
                 isLeftExpanded = true
@@ -68,7 +66,7 @@ fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
 
     Scaffold(
         floatingActionButton = {
-            if (isLoggedIn) {
+            if (isSignedIn) {
                 if (!isInEditMode) {
                     FloatingActionButton(
                         onClick = { isInEditMode = !isInEditMode },
@@ -77,7 +75,7 @@ fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Enable Edit Mode"
+                            contentDescription = stringResource(R.string.enable_edit_mode)
                         )
                     }
                 }
@@ -93,25 +91,7 @@ fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
             ) {
                 // Edit Mode Indicator
                 if (isInEditMode) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "Edit Mode Enabled",
-                            color = Color.Red,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        IconButton(onClick = { isInEditMode = false }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Disable Edit Mode",
-                            )
-                        }
-                    }
+                    EditModeBar { isInEditMode = false }
                 }
 
                 // Main Content
@@ -132,12 +112,13 @@ fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
                     // Right Column
                     MonthListColumn(
                         selectedYear = selectedYear,
-                        selectedMonth,
+                        selectedMonth = selectedMonth,
+                        isInEditMode = isInEditMode,
                         isLeftExpanded = isLeftExpanded,
-                        onMonthSelected = { year, month ->
-                            // Handle month click, e.g., update selectedWeek and selectedYear
+                        onMonthSelected = { year, month, showDialog ->
                             selectedYear = year
                             selectedMonth = month
+                            showEditStaffDialog = showDialog
                         },
                         modifier = Modifier.weight(1f)
                     )
@@ -148,12 +129,15 @@ fun LeaveRosterScreen(rosterViewModel: RosterViewModel) {
         }
     )
 
-
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewLeaveRoster() {
-    val rosterViewModel: RosterViewModel = viewModel()
-    LeaveRosterScreen(rosterViewModel)
+    // Show edit staff dialog when triggered
+    if (showEditStaffDialog) {
+        EditLeaveDialog(
+            rosterViewModel = rosterViewModel,
+            staffList = staffList,
+            staffOnLeave = staffOnLeave.filterNot { it.firstName == stringResource(R.string.n_a) },
+            selectedMonth = selectedMonth,
+            selectedYear = selectedYear,
+            onDismissRequest = { showEditStaffDialog = false }
+        )
+    }
 }
