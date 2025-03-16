@@ -1,14 +1,18 @@
 package com.rgbstudios.roster.data.model
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+
+@Serializable
 data class StaffMember(
-    val id: Int,
-    val firstName: String,
-    val lastName: String,
-    val role: Int,
-    val unit: Int,
-    val avatarUri: String,
-    val onCallDates: List<Pair<Int, List<Int>>>,
-    val gymCallDates: List<Pair<Int, List<Int>>>,
-    val leaveDates: List<Pair<Int, Int>>,
-    val phone: String,
+    @SerialName("id") val id: String = "",
+    @SerialName("first_name") val firstName: String,
+    @SerialName("last_name") val lastName: String,
+    @SerialName("role") val role: Int,
+    @SerialName("unit") val unit: Int,
+    @SerialName("on_call_dates") val onCallDates: List<Pair<Int, List<Int>>> = emptyList(),
+    @SerialName("gym_call_dates") val gymCallDates: List<Pair<Int, List<Int>>> = emptyList(),
+    @SerialName("leave_dates") val leaveDates: List<Pair<Int, Int>> = emptyList(),
+    @SerialName("phone") val phone: String,
+    @SerialName("image_url") val imageUrl: String = ""
 )
