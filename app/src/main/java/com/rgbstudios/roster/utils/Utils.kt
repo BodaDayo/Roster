@@ -1,24 +1,50 @@
 package com.rgbstudios.roster.utils
 
-import androidx.compose.ui.graphics.painter.Painter
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import androidx.work.Constraints
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.rgbstudios.roster.R
+import com.rgbstudios.roster.data.cache.DataStoreManager
 import com.rgbstudios.roster.data.model.StaffMember
-import java.time.LocalDate
-import java.time.temporal.WeekFields
+import com.rgbstudios.roster.worker.ReminderWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Calendar
-import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 fun getCurrentYear(): Int {
     return Calendar.getInstance().get(Calendar.YEAR)
 }
 
 fun getCurrentMonth(): Int {
-    return Calendar.getInstance().get(Calendar.MONTH)
+    return Calendar.getInstance().get(Calendar.MONTH) + 1
+}
+
+fun getCurrentWeek(): Int {
+    return Calendar.getInstance().get(Calendar.WEEK_OF_YEAR)
 }
 
 fun getCurrentWeekOfYear(): Int {
     val calendar = Calendar.getInstance()
     calendar.firstDayOfWeek = Calendar.MONDAY // Set Monday as the first day of the week
-    calendar.minimalDaysInFirstWeek = 4 // ISO 8601: Weeks start with at least 4 days in the first week
+    calendar.minimalDaysInFirstWeek = 4 // ISO 8601 Weeks start with at least 4 days in the 1st week
     return calendar.get(Calendar.WEEK_OF_YEAR)
 }
 
@@ -56,11 +82,21 @@ fun getRoleName(role: Int): String {
     }
 }
 
-fun getCallStats(onCallDates: List<Int>): String {
-    val currentWeek = getCurrentWeekOfYear()
-    val callsDone = onCallDates.count { it < currentWeek }
-    val totalCalls = onCallDates.size
-    return "Calls Done: $callsDone/$totalCalls"
+fun getCallStatus(staff: StaffMember): Boolean {
+    val currentYear = getCurrentYear()
+    val currentWeek = getCurrentWeek()
+
+    // Check if there's an entry in leaveDates matching the current year and month
+    return staff.onCallDates.any { (year, weeks) ->
+        year == currentYear && weeks.contains(
+            currentWeek
+        )
+    } ||
+            staff.gymCallDates.any { (year, weeks) ->
+                year == currentYear && weeks.contains(
+                    currentWeek
+                )
+            }
 }
 
 fun getLeaveStatus(staff: StaffMember): Boolean {
@@ -71,6 +107,25 @@ fun getLeaveStatus(staff: StaffMember): Boolean {
     return staff.leaveDates.any { (year, month) -> year == currentYear && month == currentMonth }
 }
 
+fun getRoleOptions(): Map<Int, String> {
+    return mapOf(
+        1 to "Intern Physiotherapist",
+        2 to "NYSC Physiotherapist",
+        3 to "Physiotherapist",
+        4 to "Senior Physiotherapist",
+        5 to "Principal Physiotherapist",
+        6 to "Deputy Director",
+        7 to "Director"
+    )
+}
+
+fun getUnitOptions(): Map<Int, String> {
+    return mapOf(
+        1 to "Neurology",
+        2 to "Orthopedics",
+        3 to "Paediatrics"
+    )
+}
 fun getWeekDateRange(year: Int, weekNumber: Int): String {
     val calendar = Calendar.getInstance()
 
@@ -112,17 +167,20 @@ fun getStaffOnCall(
 ): List<StaffMember> {
     // Filter staff who are on call for the selected week of the selected year
     val filteredStaff = staffList.filter { staff ->
-        staff.onCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek)} ||
-                staff.gymCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) }
+        staff.onCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) } ||
+                staff.gymCallDates.any { (year, weeks) ->
+                    year == selectedYear && weeks.contains(
+                        selectedWeek
+                    )
+                }
     }
 
     val placeholder = StaffMember(
-        id = -1,
+        id = "",
         firstName = "N/A",
         lastName = "",
         role = -1,
         unit = -1,
-        avatarUri = "",
         onCallDates = emptyList(),
         gymCallDates = emptyList(),
         leaveDates = emptyList(),
@@ -139,7 +197,11 @@ fun getStaffOnCall(
 
     // Gym call staff
     val gymCallStaff = filteredStaff.find { staff ->
-        staff.gymCallDates.any { (year, weeks) -> year == selectedYear && weeks.contains(selectedWeek) }
+        staff.gymCallDates.any { (year, weeks) ->
+            year == selectedYear && weeks.contains(
+                selectedWeek
+            )
+        }
     }
 
     // 2nd on Call
@@ -174,18 +236,19 @@ fun getStaffOnLeave(
     val sortedStaffList = onLeaveStaff.sortedBy { it.role }
 
     return sortedStaffList.ifEmpty {
-        listOf(StaffMember(
-        id = -1,
-        firstName = "N/A",
-        lastName = "",
-        role = -1,
-        unit = -1,
-        avatarUri = "",
-        onCallDates = emptyList(),
-        gymCallDates = emptyList(),
-        leaveDates = emptyList(),
-        phone = ""
-    ))
+        listOf(
+            StaffMember(
+                id = "",
+                firstName = "N/A",
+                lastName = "",
+                role = -1,
+                unit = -1,
+                onCallDates = emptyList(),
+                gymCallDates = emptyList(),
+                leaveDates = emptyList(),
+                phone = ""
+            )
+        )
     }
 }
 
@@ -197,21 +260,9 @@ fun getMonthForWeek(selectedWeek: Int): Int {
     return ((selectedWeek - 1) / weeksInMonth) + 1
 }
 
-fun getWeekForMonth(month: Int, year: Int): Int {
-    // Create a Calendar instance and set it to the first day of the given month and year
+fun calculateMonthProgress(year: Int, monthIndex: Int): Float {
     val calendar = Calendar.getInstance()
-    calendar.set(Calendar.YEAR, year)
-    calendar.set(Calendar.MONTH, month - 1) // Calendar months are 0-based (January is 0)
-    calendar.set(Calendar.DAY_OF_MONTH, 1)
-
-    // Get the week number of the first day of the month
-    return calendar.get(Calendar.WEEK_OF_YEAR)
-}
-
-
-fun calculateMonthProgress(year: Int, month: Int): Float {
-    val calendar = Calendar.getInstance()
-    calendar.set(year, month - 1, 1) // Set to the first day of the month
+    calendar.set(year, monthIndex, 1) // Set to the first day of the month
 
     val totalDaysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val currentDayOfMonth = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
@@ -219,3 +270,137 @@ fun calculateMonthProgress(year: Int, month: Int): Float {
     // Ensure we don't exceed the total days in the month
     return (currentDayOfMonth.toFloat() / totalDaysInMonth.toFloat()).coerceIn(0f, 1f)
 }
+
+// Validation function
+fun validateFields(
+    firstName: String,
+    lastName: String,
+    phoneNumber: String,
+    selectedRole: Int?,
+    selectedUnit: Int?
+): String {
+    return when {
+        firstName.isBlank() -> "First name is required"
+        lastName.isBlank() -> "Last name is required"
+        phoneNumber.length != 10 -> "Phone number must be exactly 10 digits (e.g., 8012345678)"
+        selectedRole == null -> "Please select a role"
+        selectedUnit == null -> "Please select a unit"
+        else -> ""
+    }
+}
+
+// Validation function for email and password
+fun validateCredentials(email: String, password: String): Boolean {
+    return email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email)
+        .matches() && password.isNotBlank()
+}
+
+// ---------------------------------
+
+fun showLongToast(context: Context, message: String) {
+    Handler(Looper.getMainLooper()).post {
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    }
+}
+
+fun showShortToast(context: Context, message: String) {
+    Handler(Looper.getMainLooper()).post {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+}
+
+// ---------------------------------
+
+// License Text
+fun getLicenseText(context: Context): String {
+    return context.getString(R.string.mit_license, getCurrentYear().toString()).trimIndent()
+}
+
+// Terms of Service
+fun getTermsAndPrivacyText(context: Context): String {
+    return context.getString(R.string.terms_of_service).trimIndent()
+}
+
+// -----------------------
+
+fun scheduleReminder(
+    context: Context,
+    staffId: String,
+    delayOption: String,
+    timeInMillis: Long,
+    title: String,
+    message: String
+) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    ) {
+        Log.d("Permission", "Notification permission not granted, skipping reminder scheduling.")
+        return
+    }
+
+    val delay = maxOf(0L, timeInMillis - System.currentTimeMillis())
+
+
+    val data = workDataOf(
+        "title" to title,
+        "message" to message,
+        "staffId" to staffId,
+        "delayOption" to delayOption
+    )
+
+    val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
+        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+        .setInputData(data)
+        .setConstraints(Constraints.NONE)
+        .addTag("reminder_$staffId")
+        .build()
+
+    WorkManager.getInstance(context).enqueue(workRequest)
+
+    val reminder = DataStoreManager.Reminder(staffId, title, message, delayOption, workRequest.id.toString())
+    CoroutineScope(Dispatchers.IO).launch {
+        DataStoreManager.saveReminder(context, reminder)
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+fun  showNotification(context: Context, title: String, message: String) {
+    val channelId = "reminder_channel"
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            channelId,
+            "Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Reminder Notifications"
+        }
+        val notificationManager = context.getSystemService(NotificationManager::class.java)
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    // Build Notification
+    val builder = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(R.drawable.roster_icon)
+        .setContentTitle(title)
+        .setContentText(message)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+
+    // Show Notification
+    val notificationManager = NotificationManagerCompat.from(context)
+
+    // Check permission before notifying
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+    ) {
+        Log.d("Permission", "Notification permission not granted, skipping notification.")
+        return
+    }
+
+    notificationManager.notify(1001, builder.build())
+}
+
+
+
+
