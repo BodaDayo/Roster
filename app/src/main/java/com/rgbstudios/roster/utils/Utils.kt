@@ -16,7 +16,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.rgbstudios.roster.R
@@ -400,7 +399,3 @@ fun  showNotification(context: Context, title: String, message: String) {
 
     notificationManager.notify(1001, builder.build())
 }
-
-
-
-
