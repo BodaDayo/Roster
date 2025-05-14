@@ -47,6 +47,23 @@ fun getCurrentWeekOfYear(): Int {
     return calendar.get(Calendar.WEEK_OF_YEAR)
 }
 
+fun getFixedWeeks(): List<Int> {
+    return listOf(
+        5, // Jan
+        4, // Feb
+        4, // Mar
+        5, // Apr
+        4, // May
+        4, // Jun
+        5, // Jul
+        4, // Aug
+        4, // Sep
+        5, // Oct
+        4, // Nov
+        4  // Dec
+    )
+}
+
 fun getMonthInfo(selectedMonth: Int): Pair<String, String> {
     val months = listOf(
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -125,6 +142,7 @@ fun getUnitOptions(): Map<Int, String> {
         3 to "Paediatrics"
     )
 }
+
 fun getWeekDateRange(year: Int, weekNumber: Int): String {
     val calendar = Calendar.getInstance()
 
@@ -289,9 +307,8 @@ fun validateFields(
 }
 
 // Validation function for email and password
-fun validateCredentials(email: String, password: String): Boolean {
-    return email.isNotBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email)
-        .matches() && password.isNotBlank()
+fun validateCredentials(username: String, password: String): Boolean {
+    return username.isNotBlank() && password.isNotBlank()
 }
 
 // ---------------------------------
