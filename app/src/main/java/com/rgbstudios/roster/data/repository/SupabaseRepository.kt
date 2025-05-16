@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.rgbstudios.roster.data.model.StaffMember
 import com.rgbstudios.roster.data.model.Suggestion
+import com.rgbstudios.roster.data.model.SuggestionUpdate
 import com.rgbstudios.roster.utils.DatabaseField
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.annotations.SupabaseExperimental
@@ -13,6 +14,7 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.realtime.selectAsFlow
 import io.github.jan.supabase.storage.storage
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.ResponseException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,14 +66,31 @@ class SupabaseRepository {
                     }
                 }
                 .launchIn(scope)
+        } catch (e: HttpRequestTimeoutException) {
+            authStateListenerInitialized = false
+            callback(false)
         } catch (e: Exception) {
             authStateListenerInitialized = false
             callback(false)
         }
     }
 
-    suspend fun signInAdmin(email: String, password: String): Result<Unit> {
+    suspend fun signInAdmin(username: String, password: String): Result<Unit> {
         return try {
+            val userProfiles = withContext(Dispatchers.IO) {
+                val client = getSupabaseClient()
+                client.from("user_profiles")
+                    .select()
+                    .decodeList<Map<String, String>>()
+            }
+
+            val usernameToEmailMap =
+                userProfiles.associate { it["username"]!!.lowercase() to it["email"]!! }
+
+            val email = usernameToEmailMap[username.lowercase()]
+                ?: return Result.failure(Exception("Invalid username or password."))
+
+            // Perform sign-in with the email
             withContext(Dispatchers.IO) {
                 val client = getSupabaseClient()
                 client.auth.signInWith(Email) {
@@ -80,6 +99,8 @@ class SupabaseRepository {
                 }
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: ResponseException) {
             // Handle API-specific exceptions
             val errorMessage = when (e.response.status.value) {
@@ -91,7 +112,7 @@ class SupabaseRepository {
             Result.failure(Exception(errorMessage))
         } catch (e: Exception) {
             // Handle other exceptions
-            Result.failure(Exception("An error occurred. Please check your connection and try again."))
+            Result.failure(e)
         }
     }
 
@@ -102,10 +123,43 @@ class SupabaseRepository {
                 client.auth.signOut()
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    suspend fun sendPasswordReset(username: String, email: String): Result<Unit> {
+        return try {
+            val authEmail = email.let {
+                it.ifBlank {
+                    val userProfiles = withContext(Dispatchers.IO) {
+                        val client = getSupabaseClient()
+                        client.from("user_profiles")
+                            .select()
+                            .decodeList<Map<String, String>>()
+                    }
+
+                    val usernameToEmailMap = userProfiles.associate { profile ->
+                        profile["username"]!!.lowercase() to profile["email"]!!
+                    }
+
+                    usernameToEmailMap[username.lowercase()]
+                        ?: return Result.failure(Exception("Username not found."))
+
+                }
+            }
+
+            val client = getSupabaseClient()
+            client.auth.resetPasswordForEmail(authEmail)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     // --- Staff Methods ---
 
@@ -118,6 +172,8 @@ class SupabaseRepository {
                     .decodeList<StaffMember>()
             }
             Result.success(staff)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -134,6 +190,8 @@ class SupabaseRepository {
                 client.from("staff").insert(newStaff)
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -143,24 +201,28 @@ class SupabaseRepository {
         imageBitmap: Bitmap,
         staffId: String
     ): String {
-        val client = getSupabaseClient()
-        val storage = client.storage.from("staff-photos")
-        val fileName = "$staffId.jpg"
+        try {
+            val client = getSupabaseClient()
+            val storage = client.storage.from("staff-photos")
+            val fileName = "$staffId.jpg"
 
-        return withContext(Dispatchers.IO) {
-            try {
-                // Compress bitmap to JPEG format with 80% quality
-                val outputStream = ByteArrayOutputStream()
-                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-                val compressedBytes = outputStream.toByteArray()
+            return withContext(Dispatchers.IO) {
+                try {
+                    // Compress bitmap to JPEG format with 80% quality
+                    val outputStream = ByteArrayOutputStream()
+                    imageBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+                    val compressedBytes = outputStream.toByteArray()
 
-                storage.upload(fileName, compressedBytes){
-                    upsert = true
+                    storage.upload(fileName, compressedBytes) {
+                        upsert = true
+                    }
+                    storage.publicUrl(fileName)
+                } catch (e: Exception) {
+                    throw Exception("Image upload failed: ${e.localizedMessage}")
                 }
-                storage.publicUrl(fileName)
-            } catch (e: Exception) {
-                throw Exception("Image upload failed: ${e.localizedMessage}")
             }
+        } catch (e: HttpRequestTimeoutException) {
+            throw Exception("An error occurred. Please check your connection and try again.")
         }
     }
 
@@ -245,6 +307,8 @@ class SupabaseRepository {
             }
 
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             val errorMessage = if (imageBitmap != null) {
                 "Image uploaded successfully, but staff details update failed"
@@ -253,7 +317,7 @@ class SupabaseRepository {
             }
 
             Log.e("UpdateError", errorMessage, e)
-            Result.failure(Exception(errorMessage))
+            Result.failure(e)
         }
     }
 
@@ -271,6 +335,8 @@ class SupabaseRepository {
                 client.storage.from("staff-photos").delete("$staffId.jpg")
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -287,6 +353,8 @@ class SupabaseRepository {
                     .decodeList<Suggestion>()
             }
             Result.success(suggestions)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -302,29 +370,36 @@ class SupabaseRepository {
                 client.from("suggestions").insert(newSuggestion)
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun resolveSuggestion(suggestionId: String, adminName: String): Result<Unit> {
+    suspend fun resolveSuggestion(
+        suggestionId: String,
+        adminName: String,
+        resolutionNote: String
+    ): Result<Unit> {
         return try {
             withContext(Dispatchers.IO) {
                 val client = getSupabaseClient()
                 client.from("suggestions")
                     .update(
-                        mapOf(
-                            "resolved" to true,
-                            "resolvedBy" to adminName,
-                            "resolvedTimestamp" to System.currentTimeMillis()
+                        SuggestionUpdate(
+                            true,
+                            adminName,
+                            System.currentTimeMillis(),
+                            resolutionNote
                         )
                     ) {
-                        filter {
-                            eq("id", suggestionId)
-                        }
+                        filter { eq("id", suggestionId) }
                     }
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -342,6 +417,8 @@ class SupabaseRepository {
                     }
             }
             Result.success(Unit)
+        } catch (e: HttpRequestTimeoutException) {
+            Result.failure(e)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -366,6 +443,11 @@ class SupabaseRepository {
                     OfflineRepository.saveStaff(updatedStaffList)
                 }
                 .launchIn(scope)
+        } catch (e: HttpRequestTimeoutException) {
+            Log.e(
+                "SupabaseRepository",
+                "An error occurred. Please check your connection and try again."
+            )
         } catch (e: Exception) {
             staffSubscriptionInitialized = false
             Log.e("SupabaseRepository", "Staff subscription failed", e)
@@ -389,6 +471,11 @@ class SupabaseRepository {
                     OfflineRepository.saveSuggestions(updatedSuggestions)
                 }
                 .launchIn(scope)
+        } catch (e: HttpRequestTimeoutException) {
+            Log.e(
+                "SupabaseReository",
+                "An error occurred. Please check your connection and try again."
+            )
         } catch (e: Exception) {
             suggestionsSubscriptionInitialized = false
             Log.e("SupabaseRepository", "Staff subscription failed", e)
