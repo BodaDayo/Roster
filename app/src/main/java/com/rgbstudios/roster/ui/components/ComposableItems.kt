@@ -16,6 +16,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -101,6 +103,7 @@ import com.rgbstudios.roster.utils.ConfirmClearRemindersDialog
 import com.rgbstudios.roster.utils.ConfirmDeleteDialog
 import com.rgbstudios.roster.utils.EditStaffDialog
 import com.rgbstudios.roster.utils.InfoDialog
+import com.rgbstudios.roster.utils.PasteTemplateDialog
 import com.rgbstudios.roster.utils.ResourceItem
 import com.rgbstudios.roster.utils.StaffDetailDialog
 import com.rgbstudios.roster.utils.StaffListItemMenuDialog
@@ -110,6 +113,7 @@ import com.rgbstudios.roster.utils.calculateMonthProgress
 import com.rgbstudios.roster.utils.getCallStatus
 import com.rgbstudios.roster.utils.getCurrentMonth
 import com.rgbstudios.roster.utils.getCurrentYear
+import com.rgbstudios.roster.utils.getFixedWeeks
 import com.rgbstudios.roster.utils.getLeaveStatus
 import com.rgbstudios.roster.utils.getLicenseText
 import com.rgbstudios.roster.utils.getMonthInfo
@@ -132,7 +136,7 @@ fun EditModeBar(onCloseClick: () -> Unit) {
         Row(modifier = Modifier.align(Alignment.Center)) {
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "Edit Mode Enabled",
+                text = stringResource(R.string.edit_mode_enabled),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.titleMedium
             )
@@ -145,7 +149,7 @@ fun EditModeBar(onCloseClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Disable Edit Mode"
+                contentDescription = stringResource(R.string.disable_edit_mode)
             )
         }
     }
@@ -178,8 +182,8 @@ fun LeftStaffColumn(
                 }
                 Text(
                     text = when (screen.route) {
-                        "call_roster" -> "PTs on Call"
-                        "leave_roster" -> "PTs on Leave"
+                        stringResource(R.string.call_roster) -> stringResource(R.string.pts_on_call)
+                        stringResource(R.string.leave_roster) -> stringResource(R.string.pts_on_leave)
                         else -> ""
                     },
                     style = MaterialTheme.typography.titleMedium,
@@ -188,8 +192,8 @@ fun LeftStaffColumn(
             } else {
                 Text(
                     text = when (screen.route) {
-                        "call_roster" -> "PTOC"
-                        "leave_roster" -> "PTOL"
+                        stringResource(R.string.call_roster) -> stringResource(R.string.ptoc)
+                        stringResource(R.string.leave_roster) -> stringResource(R.string.ptol)
                         else -> ""
                     },
                     style = MaterialTheme.typography.titleMedium,
@@ -199,7 +203,7 @@ fun LeftStaffColumn(
             }
         }
         when (screen.route) {
-            "call_roster" -> LazyColumn(
+            stringResource(R.string.call_roster) -> LazyColumn(
                 modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -214,7 +218,7 @@ fun LeftStaffColumn(
                                 color = Color.LightGray
                             )
                             Text(
-                                text = "GYM",
+                                text = stringResource(R.string.gym),
                                 style = MaterialTheme.typography.titleSmall,
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
@@ -229,14 +233,14 @@ fun LeftStaffColumn(
                                 color = Color.LightGray
                             )
                             Text(
-                                text = "2nd",
+                                text = stringResource(R.string.second),
                                 style = MaterialTheme.typography.titleSmall,
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
                         }
 
                         5 -> Text(
-                            text = "3rd",
+                            text = stringResource(R.string.third),
                             style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
@@ -380,7 +384,7 @@ fun StaffListDetailRow(
 
             if (isOnLeave) {
                 Text(
-                    text = "On Leave!",
+                    text = stringResource(R.string.on_leave),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -388,7 +392,7 @@ fun StaffListDetailRow(
 
             if (isOnCall) {
                 Text(
-                    text = "On Call",
+                    text = stringResource(R.string.on_call),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -445,8 +449,8 @@ fun QuarterCalendarColumn(
     // Calculate the index for the selected week in the list
     val initialScrollIndex = remember {
         val yearIndex = years.indexOf(selectedWeek.first)
-        val quarterIndex = (selectedWeek.second - 1) / 12
-        yearIndex * 5 + quarterIndex
+        val quarterIndex = (selectedWeek.second - 1) / 13
+        yearIndex * 5 + quarterIndex + 1
     }
 
     // LazyListState for managing scrolling
@@ -513,7 +517,7 @@ fun QuarterItem(
             .fillMaxWidth()
     ) {
         Text(
-            text = "Q$quarterNumber",
+            text = stringResource(R.string.q, quarterNumber),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier
                 .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -547,6 +551,10 @@ fun MonthColumnItem(
 ) {
     val monthAbbreviation = getMonthInfo(monthNumber).first
 
+    val weeksPerMonth = getFixedWeeks()
+    val startWeekNumber = weeksPerMonth.take(monthNumber - 1).sum() + 1
+    val numWeeksThisMonth = weeksPerMonth[monthNumber - 1]
+
     Column(modifier = Modifier.padding(4.dp)) {
         Text(
             text = monthAbbreviation,
@@ -555,8 +563,8 @@ fun MonthColumnItem(
                 .padding(horizontal = 8.dp)
                 .align(Alignment.End)
         )
-        repeat(4) { week ->
-            val weekNumber = (monthNumber - 1) * 4 + week + 1
+        repeat(numWeeksThisMonth) { week ->
+            val weekNumber = startWeekNumber + week // (monthNumber - 1) * 4 + week + 1
             val isSelected = selectedWeek.first == year && selectedWeek.second == weekNumber
             val dateRange = getWeekDateRange(year = year, weekNumber = weekNumber)
             Card(
@@ -584,7 +592,7 @@ fun MonthColumnItem(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Week ${week + 1}",
+                            text = stringResource(R.string.week, week + 1),
                             style = MaterialTheme.typography.bodyLarge,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Unspecified
                         )
@@ -653,7 +661,7 @@ fun MonthCalendarColumn(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "Week ${week + 1}",
+                                text = stringResource(R.string.week, week + 1),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Unspecified
                             )
@@ -712,7 +720,7 @@ fun MonthListColumn(
         years.forEach { year ->
             item {
                 Text(
-                    text = "$year",
+                    text = stringResource(R.string.year, year),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -756,7 +764,7 @@ fun MonthListColumn(
                         if (isInEditMode) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_back),
-                                contentDescription = "Edit Month",
+                                contentDescription = stringResource(R.string.edit_month),
                                 tint = Color.LightGray,
                                 modifier = Modifier
                                     .align(Alignment.CenterVertically)
@@ -816,7 +824,7 @@ fun CallTypeSegmentedButton(
     onSelectionChanged: (String) -> Unit
 ) {
     var selectedIndex by remember { mutableIntStateOf(0) }
-    val options = listOf("Ward Call", "Gym Call")
+    val options = listOf(stringResource(R.string.ward_call), stringResource(R.string.gym_call))
 
     SingleChoiceSegmentedButtonRow(
         modifier = Modifier
@@ -916,7 +924,7 @@ fun DetailScreen(title: String, rosterViewModel: RosterViewModel, onBack: () -> 
 
             Icon(
                 painter = painterResource(id = R.drawable.ic_back),
-                contentDescription = "Back",
+                contentDescription = stringResource(R.string.back),
                 modifier = Modifier.clickable { onBack() }
             )
         }
@@ -956,31 +964,43 @@ fun OrganogramScreen() {
 
     val maxScale = 8f
     val minScale = 1f
+    val doubleTapZoomScale = 2f
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    // Apply zoom within limits
                     val newScale = (scale * zoom).coerceIn(minScale, maxScale)
 
-                    // Calculate max pan limits based on scale
                     val maxPanX = (newScale - 1f) * 700f
                     val maxPanY = (newScale - 1f) * 700f
 
-                    // Apply pan within limits
                     offsetX = (offsetX + pan.x).coerceIn(-maxPanX, maxPanX)
                     offsetY = (offsetY + pan.y).coerceIn(-maxPanY, maxPanY)
 
                     scale = newScale
                 }
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        // Toggle between zoomed-in and normal scale
+                        if (scale > 1f) {
+                            scale = 1f
+                            offsetX = 0f
+                            offsetY = 0f
+                        } else {
+                            scale = doubleTapZoomScale
+                        }
+                    }
+                )
             },
         contentAlignment = Alignment.Center
     ) {
         Image(
             painter = painterResource(id = R.drawable.organogram),
-            contentDescription = "Organogram",
+            contentDescription = stringResource(R.string.organogram),
             contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxSize()
@@ -1001,6 +1021,7 @@ fun ClerkingScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var clinicalNotes by remember { mutableStateOf(TextFieldValue("")) }
+    var showPasteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         clinicalNotes = TextFieldValue(DataStoreManager.loadNotes(context))
@@ -1021,19 +1042,23 @@ fun ClerkingScreen() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { isSystemicExpanded = !isSystemicExpanded }
         ) {
-            Text(text = "Systemic Clerking System", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.systemic_clerking_system),
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { isSystemicExpanded = !isSystemicExpanded }) {
                 Icon(
                     painter = painterResource(
                         id = if (isSystemicExpanded) R.drawable.ic_up else R.drawable.ic_down
                     ),
-                    contentDescription = "Systemic clerking expand toggle",
+                    contentDescription = stringResource(R.string.systemic_clerking_expand_toggle),
                     modifier = Modifier.padding(8.dp),
                     tint = Color.LightGray,
                 )
             }
         }
+
         if (isSystemicExpanded) {
             SystemicCG()
         }
@@ -1042,19 +1067,23 @@ fun ClerkingScreen() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { isSegmentalExpanded = !isSegmentalExpanded }
         ) {
-            Text(text = "Segmental Clerking System", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.segmental_clerking_system),
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { isSegmentalExpanded = !isSegmentalExpanded }) {
                 Icon(
                     painter = painterResource(
                         id = if (isSegmentalExpanded) R.drawable.ic_up else R.drawable.ic_down
                     ),
-                    contentDescription = "Segmental clerking expand toggle",
+                    contentDescription = stringResource(R.string.segmental_clerking_expand_toggle),
                     modifier = Modifier.padding(8.dp),
                     tint = Color.LightGray,
                 )
             }
         }
+
         if (isSegmentalExpanded) {
             SegmentalCG()
         }
@@ -1063,19 +1092,23 @@ fun ClerkingScreen() {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.clickable { isPediatricExpanded = !isPediatricExpanded }
         ) {
-            Text(text = "Pediatrics Clerking System", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.pediatrics_clerking_system),
+                style = MaterialTheme.typography.titleMedium
+            )
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { isPediatricExpanded = !isPediatricExpanded }) {
                 Icon(
                     painter = painterResource(
                         id = if (isPediatricExpanded) R.drawable.ic_up else R.drawable.ic_down
                     ),
-                    contentDescription = "Pediatrics clerking expand toggle",
+                    contentDescription = stringResource(R.string.pediatrics_clerking_expand_toggle),
                     modifier = Modifier.padding(8.dp),
                     tint = Color.LightGray,
                 )
             }
         }
+
         if (isPediatricExpanded) {
             PediatricsCG()
         }
@@ -1089,10 +1122,15 @@ fun ClerkingScreen() {
         )
 
         Row(modifier = Modifier.padding(bottom = 8.dp)) {
-            Text(text = "Quick Clinic Notes:", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "Clear",
+                text = stringResource(R.string.quick_clinic_notes),
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = stringResource(R.string.clear),
                 color = Color.Gray,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.clickable {
@@ -1100,12 +1138,16 @@ fun ClerkingScreen() {
                         scope.launch {
                             DataStoreManager.saveNotes(context, "")
                             clinicalNotes = TextFieldValue("")
-                            showShortToast(context, "Notes content cleared!")
+                            showShortToast(
+                                context,
+                                context.getString(R.string.notes_content_cleared)
+                            )
                         }
                     }
                 }
             )
         }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1123,20 +1165,42 @@ fun ClerkingScreen() {
                 modifier = Modifier.fillMaxSize()
             )
 
+            if (clinicalNotes.text.isBlank()) {
+                Text(
+                    text = "Paste Clerking Template",
+                    fontSize = 14.sp,
+                    color = Color.Blue,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .clickable { showPasteDialog = true }
+                        .padding(8.dp)
+                )
+            }
+
             IconButton(
                 onClick = {
                     clipboardManager.setText(AnnotatedString(clinicalNotes.text))
-                    showShortToast(context, "Notes content copied!")
+                    showShortToast(context, context.getString(R.string.notes_content_copied))
                 },
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_copy),
-                    contentDescription = "Copy Notes",
+                    contentDescription = stringResource(R.string.copy_notes),
                     tint = Color.Gray
                 )
             }
         }
+    }
+
+    if (showPasteDialog) {
+        PasteTemplateDialog(
+            onTemplateClicked = { template ->
+                clinicalNotes = TextFieldValue(template)
+                showPasteDialog = false
+            },
+            onDismissRequest = { showPasteDialog = false }
+        )
     }
 }
 
@@ -1154,7 +1218,7 @@ fun GuideSection(
         // List main items with a bullet indicator (you can customize the bullet)
         items.forEach { item ->
             Row(verticalAlignment = Alignment.Top) {
-                Text("👉 ", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.bullet), style = MaterialTheme.typography.bodyLarge)
                 Text(text = item, style = MaterialTheme.typography.bodyLarge)
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -1165,7 +1229,10 @@ fun GuideSection(
             Text(text = subTitle, style = MaterialTheme.typography.titleSmall)
             subItems.forEach { subItem ->
                 Row(verticalAlignment = Alignment.Top) {
-                    Text("   - ", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        stringResource(R.string.bullet),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                     Text(text = subItem, style = MaterialTheme.typography.bodyLarge)
                 }
             }
@@ -1179,42 +1246,42 @@ fun GuideSection(
 fun SystemicCG() {
     // Patients' Biodata Section
     GuideSection(
-        title = "Patients' Biodata",
+        title = stringResource(R.string.patients_biodata),
         items = listOf(
-            "Name",
-            "Age",
-            "Gender",
-            "Occupation",
-            "Address"
+            stringResource(R.string.name),
+            stringResource(R.string.age),
+            stringResource(R.string.gender),
+            stringResource(R.string.occupation),
+            stringResource(R.string.address)
         )
     )
 
     // Presenting Complaint & History Section
     GuideSection(
-        title = "Presenting Complaint (PC)",
-        items = listOf("Describe the complaint, onset, duration, and intensity")
+        title = stringResource(R.string.presenting_complaint_pc),
+        items = listOf(stringResource(R.string.pc_prompt))
     )
 
     GuideSection(
-        title = "History Source",
-        items = listOf("Where/Whom the history is gotten from")
+        title = stringResource(R.string.history_source),
+        items = listOf(stringResource(R.string.history_source_explanation))
     )
 
     GuideSection(
-        title = "History of Presenting Complaint",
+        title = stringResource(R.string.history_of_presenting_complaint),
         items = listOf(
-            "Progression of the Condition",
-            "Date of Onset of Signs & Symptoms",
-            "Medical Management",
-            "Medical Observations",
-            "Other management",
-            "Previous Therapy",
-            "Results of Specific Investigations (X-rays, CT Scans, Blood Tests.....etc",
+            stringResource(R.string.progression_of_the_condition),
+            stringResource(R.string.date_of_onset_of_signs_symptoms),
+            stringResource(R.string.medical_management),
+            stringResource(R.string.medical_observations),
+            stringResource(R.string.other_management),
+            stringResource(R.string.previous_therapy),
+            stringResource(R.string.results_of_investigations),
         )
     )
 
     GuideSection(
-        title = "History continued",
+        title = stringResource(R.string.history_continued),
         items = listOf(
             "Medical Hx",
             "Surgical Hx",
@@ -1600,11 +1667,19 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             hasPermission = true // No need for permission on older versions
-        } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+        } else if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             hasPermission = true
         } else {
             hasPermission = false
-            if (ActivityCompat.shouldShowRequestPermissionRationale(context as Activity, Manifest.permission.POST_NOTIFICATIONS)) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(
+                    context as Activity,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            ) {
                 // User denied permission but not permanently, request again
                 permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
@@ -1647,7 +1722,7 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
                 .padding(horizontal = 8.dp)
                 .clickable { isActiveRemindersExpanded = !isActiveRemindersExpanded }
         ) {
-            Text("Active Reminders", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.active_reminders), fontWeight = FontWeight.Bold)
 
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = { isActiveRemindersExpanded = !isActiveRemindersExpanded }) {
@@ -1655,7 +1730,7 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
                     painter = painterResource(
                         id = if (isActiveRemindersExpanded) R.drawable.ic_up else R.drawable.ic_down
                     ),
-                    contentDescription = "Systemic clerking expand toggle",
+                    contentDescription = stringResource(R.string.systemic_clerking_expand_toggle),
                     modifier = Modifier.padding(8.dp),
                     tint = Color.Gray,
                 )
@@ -1665,10 +1740,10 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
         if (isActiveRemindersExpanded) {
             // Display existing reminders
             if (reminders.isNotEmpty()) {
-                Row{
+                Row {
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        text = "Cancel All",
+                        text = stringResource(R.string.cancel_all),
                         color = Color.Gray,
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier
@@ -1689,7 +1764,8 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
                             message = reminder.message,
                             onCancel = {
                                 coroutineScope.launch {
-                                   WorkManager.getInstance(context).cancelAllWorkByTag("reminder_${reminder.staffId}")
+                                    WorkManager.getInstance(context)
+                                        .cancelAllWorkByTag("reminder_${reminder.staffId}")
 
                                     DataStoreManager.removeReminder(context, reminder)
                                 }
@@ -1698,7 +1774,10 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
                     }
                 }
             } else {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {Text("No reminders set yet.",fontWeight = FontWeight.Bold)}
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) { Text(stringResource(R.string.no_reminders_set_yet), fontWeight = FontWeight.Bold) }
             }
         }
 
@@ -1733,7 +1812,6 @@ fun showSettingsDialog(context: Context) {
         .setNegativeButton("Cancel", null)
         .show()
 }
-
 
 @Composable
 fun NotificationsStaffItem(staff: StaffMember, onClick: () -> Unit) {
@@ -1805,111 +1883,142 @@ fun SuggestionsScreen(rosterViewModel: RosterViewModel) {
     var suggestionText by remember { mutableStateOf("") }
     val loadingState = remember { mutableStateOf(false) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        if (isSignedIn) {
+        if (!isSignedIn) {
+            item {
+                Text(
+                    text = "Send your suggestions, comments and opinions",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                OutlinedTextField(
+                    value = suggestionAuthor,
+                    onValueChange = { suggestionAuthor = it },
+                    label = { Text(stringResource(R.string.name_optional)) },
+                    placeholder = { Text(stringResource(R.string.anonymous)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = suggestionText,
+                    onValueChange = { suggestionText = it },
+                    label = { Text(stringResource(R.string.enter_your_suggestion)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 6
+                )
+                Button(
+                    onClick = {
+                        if (suggestionText.isNotBlank()) {
+                            loadingState.value = true
+                            val suggestionObject = Suggestion(text = suggestionText)
+                            val newSuggestion = if (suggestionAuthor.isNotBlank()) {
+                                suggestionObject.copy(author = suggestionAuthor)
+                            } else suggestionObject
 
-            if (suggestions.isEmpty()) {
+                            rosterViewModel.addSuggestion(newSuggestion) { success, _ ->
+                                loadingState.value = false
+                                if (success) {
+                                    suggestionAuthor = ""
+                                    suggestionText = ""
+                                    showShortToast(context, "Suggestion Sent Successfully!")
+                                } else {
+                                    showShortToast(
+                                        context,
+                                        "Something went wrong, try again later!"
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    enabled = !loadingState.value
+                ) {
+                    if (loadingState.value) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text(stringResource(R.string.submit_suggestion))
+                    }
+                }
+                if (suggestions.isNotEmpty()) {
+                    Text(
+                        text = "Recent Suggestions",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+                }
+            }
+        }
+
+        // Show suggestion list for both admin and non-signed-in users
+        if (suggestions.isEmpty()) {
+            item {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize(),
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No suggestions to display")
-                }
-            } else {
-                LazyColumn {
-                    items(suggestions) { suggestion ->
-                        SuggestionItem(suggestion) {
-                            selectedSuggestion = suggestion
-                            if (suggestion.resolved) showDeleteDialog =
-                                true else showResolveDialog = true
-                        }
-                    }
+                    Text(stringResource(R.string.no_suggestions_to_display))
                 }
             }
         } else {
-
-            Text(
-                text = "Send your suggestions, comments and opinions",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            )
-
-            OutlinedTextField(
-                value = suggestionAuthor,
-                onValueChange = { suggestionAuthor = it },
-                label = { Text("Name (Optional)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = suggestionText,
-                onValueChange = { suggestionText = it },
-                label = { Text("Enter your suggestion") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 6
-            )
-            Button(
-                onClick = {
-                    if (suggestionText.isNotBlank()) {
-                        loadingState.value = true
-
-                        val suggestionObject = Suggestion(text = suggestionText)
-                        val newSuggestion =
-                            if (suggestionAuthor.isNotBlank()) suggestionObject.copy(author = suggestionAuthor) else suggestionObject
-                        rosterViewModel.addSuggestion(newSuggestion) { success, _ ->
-                            loadingState.value = false
-                            if (success) {
-                                suggestionAuthor = ""
-                                suggestionText = ""
-                                showShortToast(context, "Suggestion Sent Successfully!")
-                            } else {
-                                showShortToast(context, "Something went wrong, try again later!")
-                            }
+            items(suggestions) { suggestion ->
+                SuggestionItem(suggestion) {
+                    selectedSuggestion = suggestion
+                    if (isSignedIn) {
+                        if (suggestion.resolved) {
+                            showDeleteDialog = true
+                        } else {
+                            showResolveDialog = true
                         }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                enabled = !loadingState.value
-            ) {
-                if (loadingState.value) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                } else {
-                    Text("Submit Suggestion")
                 }
             }
         }
     }
 
     if (showResolveDialog && selectedSuggestion != null) {
-        SuggestionResolveDialog(rosterViewModel,
-            selectedSuggestion!!, onDismissRequest = { showResolveDialog = false })
+        SuggestionResolveDialog(
+            rosterViewModel,
+            selectedSuggestion!!,
+            onDismissRequest = { showResolveDialog = false }
+        )
     }
 
     if (showDeleteDialog && selectedSuggestion != null) {
-        SuggestionDeleteDialog(rosterViewModel,
-            selectedSuggestion!!, onDismissRequest = { showDeleteDialog = false })
+        SuggestionDeleteDialog(
+            rosterViewModel,
+            selectedSuggestion!!,
+            onDismissRequest = { showDeleteDialog = false }
+        )
     }
 }
 
 @Composable
 fun SuggestionItem(suggestion: Suggestion, onClick: () -> Unit) {
-    val formattedDate = remember {
+    val formattedCreationDate = remember {
         SimpleDateFormat(
             "dd MMM yyyy, hh:mm a",
             Locale.getDefault()
         ).format(Date(suggestion.timestamp))
+    }
+    val formattedResolutionDate = remember {
+        suggestion.resolvedTimestamp?.let { Date(it) }?.let {
+            SimpleDateFormat(
+                "dd MMM yyyy, hh:mm a",
+                Locale.getDefault()
+            ).format(it)
+        }
     }
 
     Card(
@@ -1922,7 +2031,7 @@ fun SuggestionItem(suggestion: Suggestion, onClick: () -> Unit) {
             Column(modifier = Modifier.fillMaxWidth()) {
 
                 Text(
-                    text = "Sent on: $formattedDate",
+                    text = "Sent on: $formattedCreationDate",
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .align(Alignment.End),
@@ -1940,22 +2049,52 @@ fun SuggestionItem(suggestion: Suggestion, onClick: () -> Unit) {
                 Text(
                     text = suggestion.text
                 )
+
+                if (suggestion.resolved) {
+                    Divider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                    )
+
+                    Text(
+                        text = "Resolved by: ${suggestion.resolvedBy ?: "Admin"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (!formattedResolutionDate.isNullOrBlank()) {
+                        Text(
+                            text = "On: $formattedResolutionDate",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (!suggestion.resolutionNote.isNullOrBlank()) {
+                        Text(
+                            text = "Note: ${suggestion.resolutionNote}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
             }
 
             if (suggestion.resolved) {
-
                 // Resolved Icon Overlay
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        .border(
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                            shape = CircleShape
+                        )
                         .padding(2.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Edit Image",
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -2106,7 +2245,7 @@ fun ContactInfo() {
     Column {
         ContactItem(
             R.drawable.ic_mail,
-            "rgb.mobile.studios@gmail.com",
+            stringResource(R.string.developer_email),
             "mailto:rgb.mobile.studios@gmail.com"
         )
         ContactItem(
