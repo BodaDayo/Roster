@@ -1789,7 +1789,7 @@ fun NotificationsScreen(rosterViewModel: RosterViewModel) {
     }
 
     selectedStaff?.let { staff ->
-        StaffDetailDialog(staff, rosterViewModel, onDismiss = { selectedStaff = null })
+        StaffDetailDialog(staff, onDismiss = { selectedStaff = null })
     }
 
     if (showConfirmClearRemindersDialog) {
