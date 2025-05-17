@@ -1741,7 +1741,7 @@ fun StaffListItemMenuDialog(
 }
 
 @Composable
-fun StaffDetailDialog(staff: StaffMember, rosterViewModel: RosterViewModel, onDismiss: () -> Unit) {
+fun StaffDetailDialog(staff: StaffMember, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
