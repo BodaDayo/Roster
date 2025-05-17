@@ -63,5 +63,13 @@
     <string name="systemic_clerking_template">Physiotherapy Review\n\nPC:\n\nHx Source:\n\nHx:\n\nPMHx:\n\nPSHx:\n\nDHx:\n\nF&amp;SHx:\n\nO/E:\n\nObjective Assessment\nVitals:\n\nCVS:\n\nRespiratory:\n\nGIT:\n\nCNS:\n\nFunctional Assessment:\n\nRadiological Findings:\n\nLab Investigations:\n\nAnalysis of Findings:\n\nClinical Impression:\n\nPlan:\n\nMeans:\n</string>
     <string name="segmental_clerking_template">Physiotherapy Review\n\nPC:\n\nHx Source:\n\nHx:\n\nPMHx:\n\nPSHx:\n\nDHx:\n\nF&amp;SHx:\n\nO/E:\n\nObjective Assessment\nVitals:\n\nH/N:\n\nT&amp;A:\n\nUL:\n\nLL:\n\nSpecial Tests:\n\nFunctional Assessment:\n\nRadiological Findings:\n\nLab Investigations:\n\nAnalysis of Findings:\n\nClinical Impression:\n\nPlan:\n\nMeans:\n</string>
     <string name="pediatrics_clerking_template">Physiotherapy Review\n\nPC:\n\nHx Source:\n\nHx:\n\nPMHx:\n\nPSHx:\n\nDHx:\n\nImmHx:\n\nDevHx:\n\nMother\'s O/G Hx:\n\nF&amp;SHx:\n\nO/E:\n\nObjective Assessment\nVitals:\n\nH/N:\n\nT&amp;A:\n\nUL:\n\nLL:\n\nFunctional Assessment:\n\nRadiological Findings:\n\nLab Investigations:\n\nAnalysis of Findings:\n\nClinical Impression:\n\nPlan:\n\nMeans:\n</string>
+    <string name="no_reminders_set_yet">No reminders set yet.</string>
+    <string name="name_optional">Name (Optional)</string>
+    <string name="anonymous">Anonymous</string>
+    <string name="enter_your_suggestion">Enter your suggestion</string>
+    <string name="submit_suggestion">Submit Suggestion</string>
+    <string name="no_suggestions_to_display">No suggestions to display</string>
+    <string name="active_reminders">Active Reminders</string>
+    <string name="cancel_all">Cancel All</string>
 
 </resources>
