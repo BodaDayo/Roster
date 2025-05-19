@@ -437,7 +437,6 @@ fun PasswordResetDialog(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddStaffDialog(
@@ -1787,7 +1786,8 @@ fun StaffDetailDialog(staff: StaffMember, onDismiss: () -> Unit) {
                     staff.onCallDates.forEach { (year, weeks) ->
                         Text("Year: $year", fontWeight = FontWeight.Bold)
                         weeks.forEach { week ->
-                            val isPastOrCurrentWeek = year < currentYear || (year == currentYear && week <= currentWeek)
+                            val isPastOrCurrentWeek =
+                                year < currentYear || (year == currentYear && week <= currentWeek)
 
                             Box(
                                 modifier = Modifier
@@ -1824,7 +1824,8 @@ fun StaffDetailDialog(staff: StaffMember, onDismiss: () -> Unit) {
                     staff.gymCallDates.forEach { (year, weeks) ->
                         Text("Year: $year", fontWeight = FontWeight.Bold)
                         weeks.forEach { week ->
-                            val isPastOrCurrentWeek = year < currentYear || (year == currentYear && week <= currentWeek)
+                            val isPastOrCurrentWeek =
+                                year < currentYear || (year == currentYear && week <= currentWeek)
 
                             Box(
                                 modifier = Modifier
@@ -1860,7 +1861,8 @@ fun StaffDetailDialog(staff: StaffMember, onDismiss: () -> Unit) {
                     Text("Leave Months:", style = MaterialTheme.typography.titleMedium)
                     staff.leaveDates.forEach { (year, month) ->
                         val monthName = getMonthInfo(month).second
-                        val isPastOrCurrentMonth = year < currentYear || (year == currentYear && month <= currentMonth)
+                        val isPastOrCurrentMonth =
+                            year < currentYear || (year == currentYear && month <= currentMonth)
 
                         Box(
                             modifier = Modifier
@@ -2002,7 +2004,10 @@ fun ReminderSetupDialog(
                 val currentTime = System.currentTimeMillis()
 
                 if (reminderTimeInMillis <= currentTime) {
-                    showLongToast(context, "The reminder date selected is in the past! Please select a future time. ❌")
+                    showLongToast(
+                        context,
+                        "The reminder date selected is in the past! Please select a future time. ❌"
+                    )
                     return@Button
                 }
 
@@ -2017,19 +2022,31 @@ fun ReminderSetupDialog(
 
                 val title = "$selectedOptionFormatted's $callTypeText Reminder"
                 val message =
-                    "For ${staff.firstName} ${staff.lastName}'s $callTypeText coming up in ${if (isWeekSelected) "Week $timeUnit" else getMonthInfo(timeUnit).second}, $year."
+                    "For ${staff.firstName} ${staff.lastName}'s $callTypeText coming up in ${
+                        if (isWeekSelected) "Week $timeUnit" else getMonthInfo(
+                            timeUnit
+                        ).second
+                    }, $year."
 
                 coroutineScope.launch {
 
                     val existingReminders = DataStoreManager.getReminders(context)
-                    val isDuplicate = existingReminders.any { it.staffId == staff.id && it.title == title && it.message == message && it.delayOption == selectedOption }
+                    val isDuplicate =
+                        existingReminders.any { it.staffId == staff.id && it.title == title && it.message == message && it.delayOption == selectedOption }
 
                     if (isDuplicate) {
                         showShortToast(context, "Reminder for this has already been set! 🚫")
                         return@launch
                     }
 
-                    scheduleReminder(context, staff.id, selectedOption, reminderTimeInMillis, title, message)
+                    scheduleReminder(
+                        context,
+                        staff.id,
+                        selectedOption,
+                        reminderTimeInMillis,
+                        title,
+                        message
+                    )
 
                     showShortToast(context, "Reminder set successfully")
                     onDismiss()
@@ -2069,7 +2086,11 @@ fun SuggestionResolveDialog(
         },
         confirmButton = {
             Button(onClick = {
-                viewModel.resolveSuggestion(selectedSuggestion.id, "Admin", resolutionNote) { success, errorMessage ->
+                viewModel.resolveSuggestion(
+                    selectedSuggestion.id,
+                    "Admin",
+                    resolutionNote
+                ) { success, errorMessage ->
                     showShortToast(
                         context,
                         if (success) "Suggestion Successfully Resolved!" else errorMessage
@@ -2088,7 +2109,6 @@ fun SuggestionResolveDialog(
         }
     )
 }
-
 
 @Composable
 fun SuggestionDeleteDialog(
