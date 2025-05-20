@@ -64,8 +64,8 @@ All features are accessible through a **Bottom Navigation Bar**:
 To run the project locally:
 
 ```bash
-git clone https://github.com/your-username/roster-app.git
-cd roster-app
+git clone https://github.com/BodaDayo/Roster.git
+cd Roster
 open with Android Studio
 
 
