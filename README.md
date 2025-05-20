@@ -1,6 +1,6 @@
 # 🗓️ The Roster App
 
-![Banner](https://boda-Dayo/banner.png)
+![Banner](https://boda-Dayo/Roster/assets/banner.png)
 
 > **Built for the Physiotherapy Department, Federal Medical Centre, Owo.**
 
@@ -45,7 +45,7 @@ or
 
 ### 🛠 Manual Installation
 
-1. [Download the APK](https://your-apk-link.com)
+1. [Download the APK](https://github.com/BodaDayo/Roster/release/roster_app.apk)
 2. Enable installation from unknown sources in your Android settings.
 3. Open the APK file to install.
 
