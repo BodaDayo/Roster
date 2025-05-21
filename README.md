@@ -1,6 +1,6 @@
 # 🗓️ The Roster App
 
-![Banner](https://boda-Dayo/Roster/assets/banner.png)
+![Banner](https://github.com/BodaDayo/Roster/blob/master/assets/Banner.png)
 
 > **Built for the Physiotherapy Department, Federal Medical Centre, Owo.**
 
@@ -36,6 +36,8 @@ The **Roster App** is a smart, easy-to-use scheduling and departmental resource 
 - **About Page**: View app information, purpose, and licensing.
 
 ---
+
+![Icon]https://github.com/BodaDayo/Roster/blob/master/assets/icon.png
 
 ## 🚀 Installation
 
