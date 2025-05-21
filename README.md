@@ -61,6 +61,39 @@ All features are accessible through a **Bottom Navigation Bar**:
 
 ---
 
+## 📸 Screenshots
+
+### 🏠 Home Screen – On-Call Roster
+![Call Roster](https://github.com/BodaDayo/Roster/blob/master/assets/image1.jpeg)
+
+### 🌴 Leave Roster
+![Leave Roster](https://github.com/BodaDayo/Roster/blob/master/assets/image2.jpeg)
+
+### 👥 Staff Directory
+![Staff List](https://github.com/BodaDayo/Roster/blob/master/assets/image3.jpeg)
+
+### 📚 Resources Dashboard
+![Resources Overview](https://github.com/BodaDayo/Roster/blob/master/assets/image4.jpeg)
+
+#### 🔍 Resource Screen
+
+- **Organogram**
+  ![Organogram](https://github.com/BodaDayo/Roster/blob/master/assets/image4a.jpeg)
+
+- **Clerking Guide**
+  ![Clerking](https://github.com/BodaDayo/Roster/blob/master/assets/image4b.jpeg)
+
+- **Notifications Setup**
+  ![Notifications](https://github.com/BodaDayo/Roster/blob/master/assets/image4c.jpeg)
+
+- **Suggestion Box / Login / About**
+  ![Suggestion Box and Admin](https://github.com/BodaDayo/Roster/blob/master/assets/image4d.jpeg)
+- 
+- **Suggestion Box / Login / About**
+  ![Suggestion Box and Admin](https://github.com/BodaDayo/Roster/blob/master/assets/image4e.jpeg)
+
+---
+
 ## 🛠 Developer Setup
 
 To run the project locally:
