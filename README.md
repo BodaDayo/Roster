@@ -37,7 +37,7 @@ The **Roster App** is a smart, easy-to-use scheduling and departmental resource 
 
 ---
 
-![Icon]https://github.com/BodaDayo/Roster/blob/master/assets/icon.png
+![Icon](https://github.com/BodaDayo/Roster/blob/master/assets/icon.png)
 
 ## 🚀 Installation
 
